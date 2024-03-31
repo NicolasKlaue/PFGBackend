@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from dataclasses import dataclass
 from fastapi.middleware.cors import CORSMiddleware
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import pipeline
+classifier = pipeline("zero-shot-classification",
+                      model="facebook/bart-large-mnli")
 
-tokenizer = AutoTokenizer.from_pretrained("facebook/bart-large-mnli")
-model = AutoModelForSequenceClassification.from_pretrained("facebook/bart-large-mnli")
 
 @dataclass
 class Email():
@@ -26,5 +26,12 @@ app.add_middleware(
 )
 @app.post("/")
 async def RateEmail(email:Email) -> Urgency:
-     urgency= Urgency(3,"informative")
+     sequence_to_classify = """
+     Subject
+     {Subject}
+     Body
+     {Body}""".format(Subject = email.Subject, Body = email.Body)
+     candidateLabels = ['Irrelevant', 'Not Urgent', 'Mildly Urgent','Urgent','Extremely urgent']
+     classDict = classifier(sequence_to_classify, candidateLabels)
+     urgency= Urgency(int(candidateLabels.index(classDict['labels'][0]) + 1 ),classDict['labels'][0])
      return urgency
