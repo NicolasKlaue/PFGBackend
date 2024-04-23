@@ -80,6 +80,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+async def SendJSONTemplate():
+     return Email("Your Subject", "Your Body")
+
 @app.post("/")
 async def RateEmail(email:Email):
      sequence_to_classify = """
