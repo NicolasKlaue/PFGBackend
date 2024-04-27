@@ -5,34 +5,6 @@ from transformers import pipeline
 classifier = pipeline("zero-shot-classification",
                       model="facebook/bart-large-mnli")
 
-candidateLabels = ['energy infrastructure',
-                    'government & politics',
-                    'legal affairs',
-                    'calendar & scheduling',
-                    'employment',
-                    'personal & social',
-                    'customer support',
-                    'business document',
-                    'energy trading',
-                    'project management',
-                    'meetings & events',
-                    'project-specific',
-                    'human resources',
-                    'contract management',
-                    'marketing & promotion',
-                    'information technology',
-                    'external affairs',
-                    'media & press',
-                    'finance',
-                    'corporate governance',
-                    'energy services',
-                    'organization',
-                    'utilities',
-                    'phone communication',
-                    'safety & emergency',
-                    'market research',
-                    'email management',
-                    'education & training']
 label_urgency_dict = {'energy infrastructure' : 3,
                         'government & politics' : 3,
                         'legal affairs' : 2,
@@ -93,7 +65,7 @@ async def RateEmail(email:Email):
      Body
      {Body}""".format(Subject = email.Subject, Body = email.Body)
 
-     classDict = classifier(sequence_to_classify, candidateLabels, multi_label=True)
+     classDict = classifier(sequence_to_classify, list(label_urgency_dict.keys()), multi_label=True)
      print(classDict)
      filtered_predictions = [(label, score) for label, score in zip(classDict['labels'], classDict['scores']) if score > 0.3]
 
@@ -105,4 +77,4 @@ async def RateEmail(email:Email):
         top_3_classifications = ["other"]
      urgency_ratings = [label_urgency_dict[classification] for classification in top_3_classifications]
      urgency_rating = max(urgency_ratings)
-     return {"Urgency": urgency_rating, "Top 3 Classifications": top_3_classifications}
+     return {"urgencyRating": urgency_rating, "emailTopics": top_3_classifications}
