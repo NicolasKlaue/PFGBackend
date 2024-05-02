@@ -1,11 +1,12 @@
-from fastapi import FastAPI
+from typing import Dict
+from fastapi import FastAPI, HTTPException
 from dataclasses import dataclass
 from fastapi.middleware.cors import CORSMiddleware
 from transformers import pipeline
+import configparser
+import json
 classifier = pipeline("zero-shot-classification",
                       model="facebook/bart-large-mnli")
-
-import configparser
 
 # Create a ConfigParser object
 config = configparser.ConfigParser()
@@ -21,6 +22,11 @@ for key in config['label_urgency_dict']:
 class Email():
      Subject: str
      Body: str
+
+# Example ConfigType model for validation
+@dataclass
+class ConfigType():
+    config: Dict[str, int]
 
 @dataclass
 class Urgency():
@@ -40,6 +46,27 @@ app.add_middleware(
 async def SendJSONTemplate():
      return Email("Your Subject", "Your Body")
 
+
+@app.get("/config")
+async def SendJSONTemplate():
+     return label_urgency_dict
+# Example endpoint to receive the config data
+@app.post("/config")
+async def send_json_template(config_data: ConfigType):
+    # Assuming config_data is a dictionary containing the entire config data
+    try:
+        # Generate the configuration string in the specified format
+        config_string = "[label_urgency_dict]\n"
+        for key, value in config_data.config.items():
+            config_string += f"{key} = {value}\n"
+
+        # Write the generated configuration string to the CONFIG.cfg file
+        with open("CONFIG.cfg", "w") as file:
+            file.write(config_string)
+        
+        return {"message": "Config updated successfully"}  # Return success message
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))  # Return error message with status code 500 for internal server error
 @app.post("/")
 async def RateEmail(email:Email):
      sequence_to_classify = """
@@ -56,8 +83,9 @@ async def RateEmail(email:Email):
 
      top_3_classifications = [label for label, _ in sorted_predictions[:3]]
 
+     urgency_ratings = [label_urgency_dict[classification] for classification in top_3_classifications]
      if not top_3_classifications:
         top_3_classifications = ["other"]
-     urgency_ratings = [label_urgency_dict[classification] for classification in top_3_classifications]
+        urgency_ratings=0
      urgency_rating = max(urgency_ratings)
-     return {"urgencyRating": urgency_rating, "emailTopics": top_3_classifications}
+     return {Urgency(urgency_rating,top_3_classifications)}
