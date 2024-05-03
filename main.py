@@ -63,7 +63,9 @@ async def send_json_template(config_data: ConfigType):
         # Write the generated configuration string to the CONFIG.cfg file
         with open("CONFIG.cfg", "w") as file:
             file.write(config_string)
-        
+
+        global label_urgency_dict
+        label_urgency_dict = config_data.config
         return {"message": "Config updated successfully"}  # Return success message
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))  # Return error message with status code 500 for internal server error
